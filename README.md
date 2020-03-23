@@ -3,7 +3,7 @@ I used OpenAI's cart-pole enviroment to implement a Q-learning agent. I used Ten
 
 # Results
 This is a gif of the learned policy. Pretty stable!
-![Learned Policy](https://github.com/PeterJochem/Cart_Pole_RL/blob/master/stable.gif "Logo Title Text 1")
+![Learned Policy](https://github.com/PeterJochem/Cart_Pole_RL/blob/master/stable.gif "Learned Policy")
 
 # Tensorflow and Virtual Enviroment Setup
 It is easiest to run Tensorflow from a virtual enviroment on Linux. Here are instructions on how to setup Tensorflow and the virtual enviroment https://linuxize.com/post/how-to-install-tensorflow-on-ubuntu-18-04/
