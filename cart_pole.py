@@ -43,6 +43,8 @@ memory = []
 
 while (gameNum < 50000):
     
+    env.render()
+
     if ( exploreRate > random.random() ):
         action = env.action_space.sample()
     else:
@@ -150,7 +152,7 @@ while (gameNum < 50000):
         
     if ( gameNum % 10 == 0):    
         memory = []
-
+        exploreRate = 0.3
 
 observation = env.reset()
 observation = np.reshape(observation, [1, 4])
