@@ -9,6 +9,7 @@ from keras.optimizers import RMSprop, Adam
 import copy
 from trainingInstance import trainingInstance
 
+# Creates enviroment from OpenAI gym
 env = gym.make('CartPole-v0')
 
 # Hyper parameters
@@ -17,10 +18,7 @@ discountRate = 0.99
 exploreRate = 1.0
 exploreDecayRate = 0.95
 
-replaySize = 500
-replayBuffer = []
-replayBufferLabels = []
-
+# Create the neural network
 Q_value = Sequential()
 Q_value.add(Dense(48, input_dim = 4, activation='relu'))
 Q_value.add(Dense(24, activation='relu'))
@@ -33,12 +31,9 @@ observationPrior = copy.deepcopy(observation)
 action = 0
 
 totalReward = 0
-numEntries = 0.0
-
-episodeNum = 0
-
 gameNum = 0
 
+# This is the memory replay buffer
 memory = []
 
 while (gameNum < 50000):
@@ -58,28 +53,20 @@ while (gameNum < 50000):
         reward = -1
 
     totalReward = totalReward + reward
-    numEntries += 1
     
     if ( done == True ):
         reward = -100
 
     value = Q_value.predict(observationPrior)
-    # value = np.reshape(value, [1, 2])
-    # Add the experience to the list of data
-    replayBuffer.append(observationPrior)
     
     value[0][action] = reward
 
     if ( (action == 0) and (done == False) ):
-            #value[0] = value[0] + (learningRate * (reward + discountRate * np.amax(Q_value.predict(np.array([observation])) ) - value[0] ) )
             value[0][0] = reward + discountRate * np.amax(Q_value.predict(observation)[0] )
     elif ( done == False ):
-            #value[1] = value[1] + (learningRate * (reward + discountRate * np.amax(Q_value.predict(np.array([observation])) ) - value[1] ) )
             value[0][1] = reward + discountRate * np.amax(Q_value.predict(observation)[0] ) 
     
     memory.append( trainingInstance(observationPrior, observation, reward, action, done, gameNum)  )
-    
-    # Q_value.fit( observationPrior, value, epochs = 1, verbose = 0)
     
     batchSize = 20 #10
 
@@ -104,9 +91,6 @@ while (gameNum < 50000):
     exploreRate = exploreRate * exploreDecayRate
     exploreRate = max(exploreRate, 0.01)
 
-
-    replayBufferLabels.append(value[0])
-
     observationPrior = copy.deepcopy(observation)
 
     if (done == True):
@@ -114,17 +98,12 @@ while (gameNum < 50000):
         observation = np.reshape(observation, [1, 4])
         observationPrior = copy.deepcopy(observation)
         
-        episodeNum = episodeNum + 1
         gameNum = gameNum + 1
 
         print("The total reward for game " + str(gameNum) +  " is " + str(totalReward) )
         totalReward = 0
-        numEntries = 0.0
-    else:
-        np.random.shuffle(replayBuffer)
-        np.random.shuffle(replayBufferLabels)
-
-
+    
+    
     if ( (gameNum % 1000) == 0 ):
         batchSize = 20
 
@@ -154,6 +133,7 @@ while (gameNum < 50000):
         memory = []
         exploreRate = 0.3
 
+# This will display the learned agent to the user
 observation = env.reset()
 observation = np.reshape(observation, [1, 4])
 while (True):
