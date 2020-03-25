@@ -8,6 +8,7 @@ from keras.models import Sequential
 from keras.optimizers import RMSprop, Adam
 import copy
 from trainingInstance import trainingInstance
+import matplotlib.pyplot as plt
 
 # Creates enviroment from OpenAI gym
 env = gym.make('CartPole-v0')
@@ -18,6 +19,15 @@ discountRate = 0.99
 exploreRate = 1.0
 exploreDecayRate = 0.95
 
+# This is the number of games to play before
+# using the data to make graphs
+numEpisodes = 50
+
+# This is the total reward seen by the agent
+totalReward = 0
+# This is the current game number
+gameNum = 0
+
 # Create the neural network
 Q_value = Sequential()
 Q_value.add(Dense(48, input_dim = 4, activation='relu'))
@@ -25,18 +35,18 @@ Q_value.add(Dense(24, activation='relu'))
 Q_value.add(Dense(2, activation='linear'))
 Q_value.compile(loss='mse',  optimizer = Adam(lr = 0.001) )
 
-observation = env.reset()
-observation = np.reshape(observation, [1, 4])
-observationPrior = copy.deepcopy(observation)
-action = 0
-
-totalReward = 0
-gameNum = 0
-
 # This is the memory replay buffer
 memory = []
 
-while (gameNum < 50000):
+observation = env.reset()
+observation = np.reshape(observation, [1, 4])
+observationPrior = copy.deepcopy(observation)
+
+# Either 0 or 1 - 0 is force left, 1 is force right
+action = 0
+
+# Generate training data and learn from it
+while (gameNum < numEpisodes):
     
     env.render()
 
@@ -49,27 +59,16 @@ while (gameNum < 50000):
     observation, reward, done, info = env.step(action) 
     observation = np.reshape(observation, [1, 4])
 
-    if ( done == True ):
-        reward = -1
-
     totalReward = totalReward + reward
     
     if ( done == True ):
         reward = -100
-
-    value = Q_value.predict(observationPrior)
     
-    value[0][action] = reward
-
-    if ( (action == 0) and (done == False) ):
-            value[0][0] = reward + discountRate * np.amax(Q_value.predict(observation)[0] )
-    elif ( done == False ):
-            value[0][1] = reward + discountRate * np.amax(Q_value.predict(observation)[0] ) 
-    
+    # Add the training instance to our memory
     memory.append( trainingInstance(observationPrior, observation, reward, action, done, gameNum)  )
     
-    batchSize = 20 #10
-
+    # Sample from the memory and do an epoch of training
+    batchSize = 20 # 20 #10
     batch = memory
     if ( len(memory) < batchSize):
         batch = memory
@@ -80,13 +79,13 @@ while (gameNum < 50000):
         value = Q_value.predict(batch[i].observationPrior)
 
         value[0][action] = batch[i].reward
-
+    
         if ( (batch[i].action == 0) and (batch[i].done == False) ):
             value[0][0] = batch[i].reward + discountRate * np.amax(Q_value.predict(batch[i].observation)[0] )
-        elif ( memory[i].done == False ):
+        elif ( (batch[i].action == 1) and (batch[i].done == False) ):
             value[0][1] = batch[i].reward + discountRate * np.amax(Q_value.predict(batch[i].observation)[0] )
-
-        Q_value.fit( batch[i].observationPrior, value, epochs = 1, verbose = 0)
+        
+        Q_value.fit( batch[i].observationPrior, value, epochs = 2, verbose = 0)
     
     exploreRate = exploreRate * exploreDecayRate
     exploreRate = max(exploreRate, 0.01)
@@ -102,50 +101,11 @@ while (gameNum < 50000):
 
         print("The total reward for game " + str(gameNum) +  " is " + str(totalReward) )
         totalReward = 0
-    
-    
-    if ( (gameNum % 1000) == 0 ):
-        batchSize = 20
-
-        batch = memory
-        if ( len(memory) < batchSize):
-            batch = memory
-        else:
-            batch = random.sample(memory, batchSize)
-
-        for i in range(len(batch) ):
-            value = Q_value.predict(batch[i].observationPrior)
-
-            value[0][action] = batch[i].reward
-
-            if ( (batch[i].action == 0) and (batch[i].done == False) ):
-                    value[0][0] = batch[i].reward + discountRate * np.amax(Q_value.predict(batch[i].observation)[0] )
-            elif ( memory[i].done == False ):
-                    value[0][1] = batch[i].reward + discountRate * np.amax(Q_value.predict(batch[i].observation)[0] )
-
-            Q_value.fit( batch[i].observationPrior, value, epochs = 1, verbose = 0)        
-            
-
-        exploreRate = exploreRate * exploreDecayRate
-        exploreRate = max(exploreRate, 0.01)
-        
+     
+    # Periodically empty the memory buffer and up the explore rate
     if ( gameNum % 10 == 0):    
         memory = []
         exploreRate = 0.3
-
-# This will display the learned agent to the user
-observation = env.reset()
-observation = np.reshape(observation, [1, 4])
-while (True):
-    env.render()
-    observation = np.reshape(observation, [1, 4])
-    action = np.argmax( Q_value.predict( observation)[0] )
-
-    observation, reward, done, info = env.step(action)
-    
-    if ( done == True):
-        observation = env.reset()
-        observation = np.reshape(observation, [1, 4])
 
 
 env.close()
