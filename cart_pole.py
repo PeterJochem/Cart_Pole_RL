@@ -7,6 +7,9 @@ from keras.layers import Activation, Dense
 from keras.models import Sequential
 from keras.optimizers import RMSprop, Adam
 import copy
+import sys
+import os
+import logging
 from trainingInstance import trainingInstance
 import matplotlib.pyplot as plt
 
@@ -21,10 +24,15 @@ exploreDecayRate = 0.95
 
 # This is the number of games to play before
 # using the data to make graphs
-numEpisodes = 50
+numEpisodes = 200
 
 # This is the total reward seen by the agent
 totalReward = 0
+
+# This will store the list of all the reward we 
+# have seen over time
+allReward = []
+
 # This is the current game number
 gameNum = 0
 
@@ -98,14 +106,26 @@ while (gameNum < numEpisodes):
         observationPrior = copy.deepcopy(observation)
         
         gameNum = gameNum + 1
-
-        print("The total reward for game " + str(gameNum) +  " is " + str(totalReward) )
+            
+        # Format the string we will print
+        sys.stdout.write("\033[F") # back to previous line
+        sys.stdout.write("\033[K") # clear line        
+        print("For the last completed episode: " + str(gameNum) +  " we scored " + str(totalReward) )
+        allReward.append(totalReward)
+        
         totalReward = 0
      
     # Periodically empty the memory buffer and up the explore rate
     if ( gameNum % 10 == 0):    
         memory = []
         exploreRate = 0.3
+
+
+# Plot the data
+plt.plot( allReward )
+plt.ylabel('Cumulative Reward')
+plt.xlabel('Episode')
+plt.show()
 
 
 env.close()
